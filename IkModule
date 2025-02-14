@@ -1,0 +1,156 @@
+local InverseKinematic = {}
+
+-- Function for adding an individual pole to specify which way a leg or arm should bend
+function InverseKinematic.AddPole(parent,name: string,pos: Vector3)
+	local pole = Instance.new("Attachment")
+	pole.Parent = parent
+	pole.Name = name
+	pole.Position = pos
+	
+	if not pole then
+		warn("Pole failed when adding to", parent)
+	end
+	
+	return pole
+end
+
+--[[Function for setting up a set of poles for a default roblox character
+Returns a table of the 4 added poles]]
+function InverseKinematic.SetUpPoles(character: Model)
+	if character then
+		local hroot = character:FindFirstChild("HumanoidRootPart")
+		if not hroot then print("im gonna kms") return end
+
+		local poles = {
+			RightLeg = InverseKinematic.AddPole(hroot,"RightLegPole",Vector3.new(.5,-2,-2));
+			LeftLeg = InverseKinematic.AddPole(hroot,"LeftLegPole",Vector3.new(-.5,-2,-2));
+			RightArm = InverseKinematic.AddPole(hroot,"RightArmPole",Vector3.new(1.5, 0, 1));
+			LeftArm = InverseKinematic.AddPole(hroot,"LeftArmPole",Vector3.new(-1.5, 0, 1));
+		}
+		
+		return poles
+	end
+end
+
+--[[Function which adds an IkController and a target
+Returns only the IkControl]]
+function InverseKinematic.AddIkControl(chainroot: BasePart,endeffector: BasePart,
+	pole: Attachment,weight: number,smoothtime: number,offset: CFrame,
+	controltype: Enum.IKControlType,parent: Instance,name: string)
+	
+	local controller = Instance.new("IKControl")
+	controller.Parent = parent
+	controller.ChainRoot = chainroot
+	controller.EndEffector = endeffector
+	controller.Pole = pole
+	controller.Weight = weight
+	controller.SmoothTime = smoothtime
+	controller.Offset = offset
+	controller.Type = controltype
+	controller.Name = name
+	
+	local target = Instance.new("Part")
+	target.Parent = workspace.Targets
+	target.CanCollide = false
+	target.CanQuery = false
+	target.CanTouch = false
+	target.Anchored = false
+	target.Size = Vector3.new(0.1,0.1,0.1)
+	target.Material = Enum.Material.Neon
+	target.Color = Color3.new(1, 0, 0.0156863)
+	target.Name = tostring(name .. "Target")
+	target.Position = endeffector.Position
+	
+	controller.Target = target
+	
+	return controller
+end
+
+--[[Function which adds a full set of IkControls and targets for a default character
+returns all of the IkControls
+]]
+function InverseKinematic.SetUpIkControls(character: Model, poles)
+	if character then
+		local hroot = character:FindFirstChild("HumanoidRootPart")
+		if not hroot then return end
+		
+		local controllers = {
+			RightLeg = InverseKinematic.AddIkControl(character.RightUpperLeg,character.RightFoot,poles.RightLeg,1,.01,
+				CFrame.new(),Enum.IKControlType.Transform,hroot,character.Name .. "RightLegIkControl");
+			LeftLeg = InverseKinematic.AddIkControl(character.LeftUpperLeg,character.LeftFoot,poles.LeftLeg,1,.01,
+				CFrame.new(),Enum.IKControlType.Transform,hroot,character.Name .. "LeftLegIkControl");
+			RightArm = InverseKinematic.AddIkControl(character.RightUpperArm,character.RightHand,poles.RightArm,1,.05,
+				CFrame.new(),Enum.IKControlType.Position,hroot,character.Name .. "RightArmIkControl");
+			LeftArm = InverseKinematic.AddIkControl(character.LeftUpperArm,character.LeftHand,poles.LeftArm,1,.05,
+				CFrame.new(),Enum.IKControlType.Position,hroot,character.Name .. "LeftArmIkControl");
+		}
+
+		return controllers
+	end
+end
+
+--[[Function which calculates and applies a step
+// Credit: @EgoMoose (Roblox)]]
+function InverseKinematic.IkLegStep(ikTarget: BasePart, ikRayAttachment: Attachment, root: BasePart,
+	stepDistance: number, stepForward: number, stepHeight: number, stepWait: number, rayCastParams: RaycastParams)
+	
+	stepWait = stepWait or 0.05
+	stepForward = stepForward or 0
+	stepHeight = stepHeight or 2
+	
+	local rayCast = workspace:Raycast(ikRayAttachment.WorldPosition,Vector3.new(0, -1000, 0), rayCastParams)
+	
+	if rayCast then
+		if not ikTarget:GetAttribute("PreviousPos") then
+			ikTarget:SetAttribute("PreviousPos", Vector3.new(0, 0, 0))
+		end
+
+		local previousFootPos = ikTarget:GetAttribute("PreviousPos")
+
+		local defaultFootPos = rayCast.Position
+		local diff = (defaultFootPos - previousFootPos).Magnitude
+
+		if diff > stepDistance then
+			local finalFootPos = rayCast.Position + root.CFrame.LookVector * stepForward
+			local middleFootPos = ((finalFootPos - previousFootPos) * 0.5 + previousFootPos) + Vector3.new(0, stepHeight, 0)
+
+			coroutine.wrap(function()
+				ikTarget.Position = middleFootPos
+				task.wait(stepWait)
+				ikTarget.Position = finalFootPos
+
+				ikTarget:SetAttribute("PreviousPos", ikTarget.Position)
+				
+			end)()
+		end
+	else
+		print("raycast not hit")
+	end
+end
+
+--Sets up a complete set of IkControls, Targets and Poles for a default character
+function InverseKinematic.CompleteSetUp(character: Model)
+	if not character then
+		warn("Character is nil, can't set up IK!")
+		return
+	end
+
+	print("Setting up IK for character:", character.Name)
+
+	local poles = InverseKinematic.SetUpPoles(character)
+	if not poles then
+		warn("Failed to set up poles for", character.Name)
+		return
+	end
+
+	local ikcontrols = InverseKinematic.SetUpIkControls(character, poles)
+	if not ikcontrols then
+		warn("Failed to set up IK controls for", character.Name)
+		return
+	end
+
+	print("Successfully set up IK for", character.Name)
+	return {poles, ikcontrols}
+end
+
+return InverseKinematic
