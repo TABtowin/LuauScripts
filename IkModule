@@ -1,3 +1,4 @@
+```lua
 local InverseKinematic = {}
 
 -- Function for adding an individual pole to specify which way a leg or arm should bend
@@ -154,3 +155,4 @@ function InverseKinematic.CompleteSetUp(character: Model)
 end
 
 return InverseKinematic
+```
