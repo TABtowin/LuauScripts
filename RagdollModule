@@ -1,0 +1,178 @@
+local RagdollModule = {}
+
+--just a few variables
+local ps = game:GetService("PhysicsService")
+
+
+-- dont use this function manually if u dumb
+-- Function for adding joints("BallSocketConstraint" or "HingeConstraint") between two attachments #hugenerd #ewww
+function RagdollModule.AddJoint(attachment0,attachment1,jointtype,name,parent,limitsenabled,upperangle,lowerangle
+	,twistlowerangle,twistupperangle)
+	assert(attachment0,"Error: Attachment0 aint here wth")
+	assert(attachment1,"Error: Attachment1 didnt come along idk")
+	
+	
+	local joint = Instance.new(jointtype)
+	joint.Parent = parent
+	joint.Name = name
+	joint.Attachment0 = attachment0
+	joint.Attachment1 = attachment1
+	joint.Enabled = false
+	
+	if limitsenabled == true then
+		joint.LimitsEnabled = limitsenabled
+		if jointtype == "BallSocketConstraint" then
+			joint.UpperAngle = upperangle
+			joint.TwistLimitsEnabled = true
+			joint.TwistLowerAngle = twistlowerangle
+			joint.TwistUpperAngle = twistupperangle
+		else
+			joint.UpperAngle = upperangle
+			joint.LowerAngle = lowerangle
+		end
+	end
+	
+	return joint
+end
+-- Function for finding attachment in a character easily uwu
+function RagdollModule.GetAttachment(parent,name)
+	for i, attachment in pairs(parent:GetDescendants()) do
+		if attachment:IsA("Attachment") then
+			if attachment.Name == name then
+				return attachment
+			end
+		end
+	end
+end
+
+-- Editing this function might cause problems with setting up ragdoll, you have been warned #scary
+-- Function which aims to add all the necessary constraints for a ragdoll. Dont use this on
+-- anything but default r15 characters #nerd #loser #lonely #boring
+function RagdollModule.PrepRagdoll(character)
+	character:FindFirstChild("Humanoid").BreakJointsOnDeath = false
+	local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+	assert(humanoidRootPart, "HumanoidRootPart is missing dumbass!")
+	
+	local joints = {
+		LeftElbow = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.LeftUpperArm,"LeftElbowRigAttachment")
+			,RagdollModule.GetAttachment(character.LeftLowerArm,"LeftElbowRigAttachment"),"HingeConstraint",
+			"LeftElbowRig",humanoidRootPart,true,135,0);
+		RightElbow = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.RightUpperArm,"RightElbowRigAttachment")
+			,RagdollModule.GetAttachment(character.RightLowerArm,"RightElbowRigAttachment"),"HingeConstraint",
+			"RightElbowRig",humanoidRootPart,true,135,0);
+		LeftKnee = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.LeftUpperLeg,"LeftKneeRigAttachment")
+			,RagdollModule.GetAttachment(character.LeftLowerLeg,"LeftKneeRigAttachment"),"HingeConstraint",
+			"LeftKneeRig",humanoidRootPart,true,-10,-135);
+		RightKnee = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.RightUpperLeg,"RightKneeRigAttachment")
+			,RagdollModule.GetAttachment(character.RightLowerLeg,"RightKneeRigAttachment"),"HingeConstraint",
+			"RightKneeRig",humanoidRootPart,true,-10,-135);
+		Waist = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.LowerTorso,"WaistRigAttachment")
+			,RagdollModule.GetAttachment(character.UpperTorso,"WaistRigAttachment"),"HingeConstraint",
+			"WaistRig",humanoidRootPart,true,90,-90);
+		LeftHip = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.LowerTorso,"LeftHipRigAttachment")
+			,RagdollModule.GetAttachment(character.LeftUpperLeg,"LeftHipRigAttachment"),"BallSocketConstraint",
+			"LeftHipRig",humanoidRootPart,true,80,nil,-3,3);
+		RightHip = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.LowerTorso,"RightHipRigAttachment")
+			,RagdollModule.GetAttachment(character.RightUpperLeg,"RightHipRigAttachment"),"BallSocketConstraint",
+			"RightHipRig",humanoidRootPart,true,80,nil,-3,3);
+		LeftShoulder = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.UpperTorso,"LeftShoulderRigAttachment")
+			,RagdollModule.GetAttachment(character.LeftUpperArm,"LeftShoulderRigAttachment"),"BallSocketConstraint",
+			"LeftShoulderRig",humanoidRootPart,true,170,nil,-0,0);
+		RightShoulder = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.UpperTorso,"RightShoulderRigAttachment")
+			,RagdollModule.GetAttachment(character.RightUpperArm,"RightShoulderRigAttachment"),"BallSocketConstraint",
+			"RightShoulderRig",humanoidRootPart,true,170,nil,-0,0);
+		LeftWrist = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.LeftLowerArm,"LeftWristRigAttachment")
+			,RagdollModule.GetAttachment(character.LeftHand,"LeftWristRigAttachment"),"BallSocketConstraint",
+			"LeftWristRig",humanoidRootPart,true,20,nil,-0,0);
+		RightWrist = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.RightLowerArm,"RightWristRigAttachment")
+			,RagdollModule.GetAttachment(character.RightHand,"RightWristRigAttachment"),"BallSocketConstraint",
+			"RightWristRig",humanoidRootPart,true,20,nil,-0,0);
+		LeftAnkle = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.LeftLowerLeg,"LeftAnkleRigAttachment")
+			,RagdollModule.GetAttachment(character.LeftFoot,"LeftAnkleRigAttachment"),"BallSocketConstraint",
+			"LeftAnkleRig",humanoidRootPart,true,20,nil,-0,0);
+		RightAnkle = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.RightLowerLeg,"RightAnkleRigAttachment")
+			,RagdollModule.GetAttachment(character.RightFoot,"RightAnkleRigAttachment"),"BallSocketConstraint",
+			"RightAnkleRig",humanoidRootPart,true,20,nil,-0,0);
+		Neck = RagdollModule.AddJoint(RagdollModule.GetAttachment(character.Head,"NeckRigAttachment")
+			,RagdollModule.GetAttachment(character.UpperTorso,"NeckRigAttachment"),"BallSocketConstraint",
+			"NeckRig",humanoidRootPart,true,30,nil,-70,70);
+	}
+	
+	return joints
+end
+
+-- Function for making a character into a ragdoll i think i dunno (i need to get a job D: )
+-- btw -1 means infinite duration tihihi
+function RagdollModule.Ragdoll(character,duration,joints)
+	local walkspeed
+	local jumppower
+	
+	local hum = character:FindFirstChild("Humanoid")
+	local hroot = character:FindFirstChild("HumanoidRootPart")
+	
+	local plrcollision = "Ragdoll" .. character.Name
+
+	hum.RequiresNeck = false
+	walkspeed = hum.WalkSpeed
+	jumppower = hum.JumpPower
+	hum.WalkSpeed = 0
+	hum.JumpPower = 0 
+	
+	if not ps:IsCollisionGroupRegistered(plrcollision) then
+		ps:RegisterCollisionGroup(plrcollision)
+		ps:CollisionGroupSetCollidable(plrcollision,"Default",true)
+		ps:CollisionGroupSetCollidable(plrcollision,plrcollision,false)
+	end
+	
+	workspace.CurrentCamera.CameraSubject = hroot
+	
+	hroot.CanCollide = false
+	
+	for i,v in pairs(character:GetDescendants()) do
+		if v:IsA("Motor6D") then
+			if v.Enabled == true and v.Name ~= "Root" then
+				v.Enabled = false
+			end
+		elseif v:IsA("BasePart") or v:IsA("Meshpart") or v:IsA("Part") then
+			if game.Players:GetPlayerFromCharacter(character) then
+				v:SetNetworkOwner(game.Players:GetPlayerFromCharacter(character))
+			end
+			if ps:IsCollisionGroupRegistered(plrcollision) then
+				v.CollisionGroup = plrcollision
+				v.CanCollide = true
+			end
+		end
+	end
+	
+	for _, v in joints do
+		v.Enabled = true
+	end
+	
+	task.defer(function()
+		 task.wait(duration)
+		if duration ~= -1 then
+			workspace.CurrentCamera.CameraSubject = hum
+
+			for i,v in pairs(character:GetDescendants()) do
+				if v:IsA("Motor6D") and v.Name ~= "Root" then
+					v.Enabled = true
+				elseif v:IsA("BasePart") or v:IsA("Meshpart") or v:IsA("Part") then
+					if ps:IsCollisionGroupRegistered(plrcollision) then
+						v.CollisionGroup = "Default"
+						v.CanCollide = false
+					end
+				end
+			end
+
+			hum.WalkSpeed = walkspeed
+			hum.JumpHeight = jumppower
+
+			hroot.CanCollide = true
+
+			ps:UnregisterCollisionGroup(plrcollision)
+		end
+	end)
+	
+end
+
+return RagdollModule
